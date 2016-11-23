@@ -1,0 +1,20 @@
+{
+  "name": "Gmail.js",
+  "version": "0.1",
+  "description": "DeepBreath Email Extension",
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "permissions": [
+    "https://deepbreath-149920.appspot.com/*"
+  ],
+  "web_accessible_resources": [
+    "jquery-1.10.2.min.js",
+    "gmail.js",
+    "main.js"
+  ],
+  "manifest_version": 2
+}
