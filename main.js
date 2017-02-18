@@ -1,3 +1,16 @@
+// Copyright 2017, Google, Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 var gmail;
 
 
@@ -9,47 +22,46 @@ function refresh(f) {
   }
 }
 
+// Don't warn twice for the same draft
+var warned = {};
 
 var main = function(){
-  // NOTE: Always use the latest version of gmail.js from
-  // https://github.com/KartikTalwar/gmail.js
   gmail = new Gmail();
-  console.log('Hello,', gmail.get.user_email())
 
   gmail.observe.on('save_draft', function(id, url, body, xhr) {
-    console.log("saved a draft2");
-    console.log(body.body);
+    var draftId = url['permmsgid'];
 
+    var nlpreq = new XMLHttpRequest();
+    nlpreq.open("POST", "https://language.googleapis.com/v1beta1/documents:analyzeSentiment?key=AIzaSyAMETY4621rAJ1nij8JnMPnKTcSiiZttGQ", true);
 
-    var xhr = new XMLHttpRequest();
+    nlpreq.setRequestHeader("Content-type", "application/json");
 
-    xhr.open("POST", "https://deepbreath-149920.appspot.com/feels", true);
+    var request = {
+      document: {
+        type: "PLAIN_TEXT",
+        content: body.body
+      },
+      encodingType: "UTF8"
+    };
+    nlpreq.send(JSON.stringify(request));
 
-    var params = "content=" + encodeURIComponent(body.body);
-    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    console.log("SENDING A MESSAGE2");
-    xhr.onreadystatechange = function() {//Call a function when the state
-      // changes.
-      if(xhr.readyState == 4 && xhr.status == 200) {
+    nlpreq.onreadystatechange = function() {
+      if(nlpreq.readyState == 4 && nlpreq.status == 200) {
 
+        response = JSON.parse(nlpreq.responseText);
 
-        splitText = xhr.responseText.split(" ");
-        console.log("ugg ", splitText);
-        sentiment = parseFloat(splitText[0]);
-        magnitude = parseFloat(splitText[1]);
-
-        console.log("GOT IT sentiment", sentiment);
-        console.log("GOT IT magnitude", magnitude);
+        sentiment = parseFloat(response['documentSentiment']['score']);
+        magnitude = parseFloat(response['documentSentiment']['magnitude']);
 
         if (sentiment < -0.4 && magnitude > 0.5) {
-          alert("Careful! This email is getting pretty negative.");
+          if (!warned[draftId]) {
+            warned[draftId] = true;
+            alert("Careful! This email is getting pretty negative.");
+          }
         }
       }
-    };
-    console.log("SENDING A MESSAGE");
-    xhr.send(params);
+    }
   });
-
 };
 
 
