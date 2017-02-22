@@ -13,6 +13,7 @@
 
 var gmail;
 
+var API_KEY = 'your-api-key'
 
 function refresh(f) {
   if( (/in/.test(document.readyState)) || (typeof Gmail === undefined) ) {
@@ -32,7 +33,7 @@ var main = function(){
     var draftId = url['permmsgid'];
 
     var nlpreq = new XMLHttpRequest();
-    nlpreq.open("POST", "https://language.googleapis.com/v1beta1/documents:analyzeSentiment?key=AIzaSyAMETY4621rAJ1nij8JnMPnKTcSiiZttGQ", true);
+    nlpreq.open("POST", "https://language.googleapis.com/v1beta1/documents:analyzeSentiment?key=" + API_KEY, true);
 
     nlpreq.setRequestHeader("Content-type", "application/json");
 
