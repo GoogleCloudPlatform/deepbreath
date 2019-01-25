@@ -13,8 +13,6 @@
 
 var gmail;
 
-var API_KEY = 'your-api-key'
-
 function refresh(f) {
   if( (/in/.test(document.readyState)) || (typeof Gmail === undefined) ) {
     setTimeout('refresh(' + f + ')', 10);
@@ -23,39 +21,81 @@ function refresh(f) {
   }
 }
 
-// Don't warn twice for the same draft
+// extension  option
+var googleApiKey = ''
+var wordsToAvoid = []
+
+// Keep track of warned drafts so we don't warn twice for the same draft.
 var warned = {};
+
+// Regex/separators
+var sentenceRegex = new RegExp("([.]) +([A-Z])", "g");
+var sentenceSeparator = "__SENTENCE SEPARATOR__";
+
+// Load our words to avoid into an array
+chrome.storage.sync.get({
+  wordsToAvoid: '',
+  googleApiKey: ''
+}, function(items) {
+  googleApiKey = items.googleApiKey
+  wordsToAvoid = items.wordsToAvoid.split(',').map(function(word) {
+    return word.trim();
+  }).filter(function (word) {
+    return word != "";
+  })
+})
 
 var main = function(){
   gmail = new Gmail();
 
   gmail.observe.on('save_draft', function(id, url, body, xhr) {
     var draftId = url['permmsgid'];
+    // Don't warn twice for the same draft
+    if (warned[draftId]) {
+      return;
+    }
+    // Check for specific words
+    if (wordsToAvoid.length > 0) {
+      var textToSearch = body.body
+      var modifiedText = textToSearch.replace(sentenceRegex, "$1" + sentenceSeparator + "$2")
 
-    var nlpreq = new XMLHttpRequest();
-    nlpreq.open("POST", "https://language.googleapis.com/v1beta1/documents:analyzeSentiment?key=" + API_KEY, true);
+      modifiedText.split(sentenceSeparator).forEach(function(sentence) {
+        words.forEach(keyword => {
+          var keywordRegex = new RegExp("(^| +)" + keyword + "( +|[.])", "i");
+          if (keywordRegex.test(sentence)) {
+            warned[draftId] = true;
+            alert("Your email contains a word you want to avoid: "  + keyword);
+            return;
+          }
+        })
+      });
+    }
 
-    nlpreq.setRequestHeader("Content-type", "application/json");
+    // Check for general sentiment
+    if (items.googleApiKey) {
+      var nlpreq = new XMLHttpRequest();
+      nlpreq.open("POST", "https://language.googleapis.com/v1beta1/documents:analyzeSentiment?key=" + items.googleApiKey, true);
 
-    var request = {
-      document: {
-        type: "PLAIN_TEXT",
-        content: body.body
-      },
-      encodingType: "UTF8"
-    };
-    nlpreq.send(JSON.stringify(request));
+      nlpreq.setRequestHeader("Content-type", "application/json");
 
-    nlpreq.onreadystatechange = function() {
-      if(nlpreq.readyState == 4 && nlpreq.status == 200) {
+      var request = {
+        document: {
+          type: "PLAIN_TEXT",
+          content: body.body
+        },
+        encodingType: "UTF8"
+      };
+      nlpreq.send(JSON.stringify(request));
 
-        response = JSON.parse(nlpreq.responseText);
+      nlpreq.onreadystatechange = function() {
+        if(nlpreq.readyState == 4 && nlpreq.status == 200) {
 
-        sentiment = parseFloat(response['documentSentiment']['score']);
-        magnitude = parseFloat(response['documentSentiment']['magnitude']);
+          response = JSON.parse(nlpreq.responseText);
 
-        if (sentiment < -0.4 && magnitude > 0.5) {
-          if (!warned[draftId]) {
+          sentiment = parseFloat(response['documentSentiment']['score']);
+          magnitude = parseFloat(response['documentSentiment']['magnitude']);
+
+          if (sentiment < -0.4 && magnitude > 0.5) {
             warned[draftId] = true;
             alert("Careful! This email is getting pretty negative.");
           }
@@ -64,6 +104,5 @@ var main = function(){
     }
   });
 };
-
 
 refresh(main);
