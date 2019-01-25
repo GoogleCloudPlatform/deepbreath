@@ -1,6 +1,6 @@
 {
   "name": "Deepbreath",
-  "version": "0.1",
+  "version": "0.2",
   "description": "DeepBreath Email Extension",
   "content_scripts": [
     {
@@ -9,12 +9,17 @@
     }
   ],
   "permissions": [
-    "https://language.googleapis.com/*"
+    "https://language.googleapis.com/*",
+    "storage"
   ],
   "web_accessible_resources": [
     "third_party/jquery-1.10.2.min.js",
     "third_party/gmail.js",
     "main.js"
   ],
-  "manifest_version": 2
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "manifest_version": 3
 }
